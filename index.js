@@ -4,9 +4,6 @@ const { connect } = require("mongoose");
 require("dotenv").config();
 const path = require("path");
 
-
-
-
 const userRoutes = require("./routes/userRoutes");
 const PostRoutes = require("./routes/postRoutes");
 
@@ -17,18 +14,20 @@ app.use(express.json({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [
   "http://localhost:5173", // Local development
-  process.env.FRONTEND_URL_PRODUCTION // Production frontend URL
+  process.env.FRONTEND_URL_PRODUCTION, // Production frontend URL
 ];
-app.use(cors({
-  credentials: true,
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  }
-}));
+app.use(
+  cors({
+    credentials: true,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+  })
+);
 
 app.use(express.static(path.join(__dirname, "public")));
 
