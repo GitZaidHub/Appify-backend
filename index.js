@@ -3,8 +3,7 @@ const cors = require("cors");
 const { connect } = require("mongoose");
 require("dotenv").config();
 const path = require("path");
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+
 
 
 
@@ -16,9 +15,21 @@ const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const app = express();
 app.use(express.json({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({ credentials: true, origin: "https://startblogapp.netlify.app/" }));
-app.use(helmet());
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+const allowedOrigins = [
+  "http://localhost:5173", // Local development
+  "https://your-production-frontend.netlify.app" // Production frontend URL
+];
+app.use(cors({
+  credentials: true,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  }
+}));
+
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/uploads", express.static(__dirname + "/uploads"));
