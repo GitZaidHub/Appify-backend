@@ -17,7 +17,7 @@ app.use(express.json({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [
   "http://localhost:5173", // Local development
-  "https://your-production-frontend.netlify.app" // Production frontend URL
+  process.env.FRONTEND_URL_PRODUCTION // Production frontend URL
 ];
 app.use(cors({
   credentials: true,
