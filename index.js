@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { connect } = require("mongoose");
+const fs = require("fs")
 require("dotenv").config();
 const path = require("path");
 
@@ -18,9 +19,15 @@ app.use(cors({
 }));
 
 
-app.use(express.static(path.join(__dirname, "public")));
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+}
 
-app.use("/uploads", express.static(__dirname + "/uploads"));
+// Serve static files
+app.use(express.static(path.join(__dirname, "public")));
+app.use("/uploads", express.static(uploadsDir));
 
 app.use("/api/users", userRoutes);
 app.use("/api/posts", PostRoutes);
