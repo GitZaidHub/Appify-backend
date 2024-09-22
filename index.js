@@ -26,7 +26,7 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Serve static files
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "/uploads")));
 app.use("/uploads", express.static(uploadsDir));
 
 app.use("/api/users", userRoutes);
