@@ -68,9 +68,20 @@ const registerUser = async (req, res, next) => {
     // Generate a verification token
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
+    
+
     // Send verification email
     await sendVerificationEmail(newUser.email, token);
 
+    setTimeout(async () => {
+      const user = await User.findById(newUser._id);
+      if (user && !user.isVerified) {
+        await User.findByIdAndDelete(newUser._id);
+        console.log(`Unverified user with ID ${newUser._id} has been deleted.`);
+      }
+    }, 900000); // 1 hour = 3600000 ms
+
+    
     res.status(201).json({ message: `New user ${newUser.name} registered. Please verify your email!`, user: newUser });
   } catch (error) {
     console.error("Error during registration:", error); // Log the error for debugging
@@ -129,44 +140,23 @@ const getUser = async(req, res, next) => {
     return next(new HttpError("Error in finding User",422))
  }
 };
+
 const changeAvatar = async (req, res, next) => {
-  upload(req, res, async (err) => {
-      if (err instanceof multer.MulterError) {
-          return next(new HttpError(err.message, 422)); // Multer-specific error
-      } else if (err) {
-          return next(new HttpError(err.message, 422)); // Other errors
-      }
+  const { avatarURL } = req.body;
+  console.log(req.body);
+  const userId = req.user.id; // assuming userId is coming from JWT
 
-      try {
-          if (!req.files.avatar) {
-              return next(new HttpError('Please choose an avatar', 422));
-          }
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    
+    user.avatar = avatarURL; // Save Firebase URL
+    await user.save();
+    res.json({ avatar: avatarURL });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating avatar" });
+  }
 
-          const user = await User.findById(req.user.id);
-
-          // Delete existing avatar if it exists
-          if (user.avatar) {
-              fs.unlink(path.join(__dirname, "..", "uploads", user.avatar), (err) => {
-                  if (err) {
-                      return next(new HttpError("Cannot delete existing avatar", 422));
-                  }
-              });
-          }
-
-          // Save new avatar filename
-          user.avatar = req.files.avatar[0].filename;
-
-          const updatedUser = await user.save();
-
-          if (!updatedUser) {
-              return next(new HttpError("Could not update the avatar", 422));
-          }
-
-          res.status(200).json(updatedUser);
-      } catch (error) {
-          return next(new HttpError("There was a problem uploading the avatar", 422));
-      }
-  });
 };
 
 const editUser = async(req, res, next) => {
