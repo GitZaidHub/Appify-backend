@@ -1,34 +1,263 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Verified</title>
+    <title>Email Verified - Appify</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            background-color: #f5f5f5;
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            text-align: center;
+            min-height: 100vh;
             padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            background-color: #fff;
         }
+
+        .container {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            padding: 60px 40px;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: scaleIn 0.6s ease-out;
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+            }
+
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .checkmark {
+            width: 44px;
+            height: 44px;
+            border: 3px solid #fff;
+            border-right: none;
+            border-top: none;
+            border-radius: 50%;
+            transform: rotate(-45deg);
+            animation: checkmark 0.8s ease-out 0.4s forwards;
+            opacity: 0;
+        }
+
+        @keyframes checkmark {
+            0% {
+                height: 0;
+                width: 0;
+                opacity: 1;
+            }
+
+            20% {
+                height: 0;
+                width: 44px;
+                opacity: 1;
+            }
+
+            40% {
+                height: 44px;
+                width: 44px;
+                opacity: 1;
+            }
+
+            100% {
+                height: 44px;
+                width: 44px;
+                opacity: 1;
+            }
+        }
+
         h1 {
-            color: green;
+            font-size: 28px;
+            color: #111;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+
+        .message {
+            font-size: 16px;
+            color: #444;
+            margin-bottom: 32px;
+            line-height: 1.7;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-direction: column;
+            margin-top: 32px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-secondary {
+            background: #f5f7fb;
+            color: #667eea;
+            border: 1px solid #e0e7ff;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e7ff;
+            border-color: #667eea;
+        }
+
+        .footer {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #f0f0f0;
+            font-size: 13px;
+            color: #999;
+        }
+
+        .features {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 40px;
+            padding-top: 32px;
+            border-top: 1px solid #f0f0f0;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .feature {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .feature-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .feature-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 40px 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <h1>Email Successfully Verified!</h1>
-        <p>Your email has been verified. You can now log in to your account.</p>
+        <div class="success-icon">
+            <div class="checkmark"></div>
+        </div>
+
+        <h1>Email Verified!</h1>
+        <p class="subtitle">Your email has been successfully verified.</p>
+
+        <div class="message">
+            Your account is now fully activated and ready to use. Welcome to Appify!
+        </div>
+
+        <div class="action-buttons">
+            <a href="<%= FRONTEND_URL %>" class="btn btn-primary">Go to Dashboard</a>
+            <a href="<%= FRONTEND_URL %>/login" class="btn btn-secondary">Back to Login</a>
+        </div>
+
+        <!-- <div class="features">
+            <div class="feature">
+                <div class="feature-icon">🚀</div>
+                <div class="feature-text">Ready to use</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔒</div>
+                <div class="feature-text">Fully secure</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">✨</div>
+                <div class="feature-text">All features unlocked</div>
+            </div>
+        </div> -->
+
+        <div class="footer">
+            &copy; 2025 Appify. All rights reserved.
+        </div>
     </div>
 </body>
+
 </html>

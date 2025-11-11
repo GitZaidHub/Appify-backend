@@ -6,7 +6,10 @@ const PostSchema = new Schema({
     category: { 
         type: String, 
         enum: {
-            values: ["Agriculture", "Business", "Education", "Entertainment", "Art", "Investment", "Uncategorized", "Weather"],
+            values: ["Agriculture", "Business", "Education", "Entertainment", "Art", "Investment", "Uncategorized", "Weather","Politics",
+    "Technology",
+    "Health",
+    "Science",],
             message: "{VALUE} is not supported" 
         }
     },

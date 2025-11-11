@@ -12,9 +12,22 @@ const { post } = require("../routes/userRoutes");
 
 const createPost = async (req, res, next) => {
   try {
-    const { title, category, description, thumbnails } = req.body;
+    const { title, category, description } = req.body;
 
-    console.log("Request Body:", req.body);
+    // Support both thumbnails (array) and thumbnails[0], thumbnails[1], ... (FormData)
+    let thumbnails = req.body.thumbnails;
+    if (!thumbnails) {
+      thumbnails = Object.keys(req.body)
+        .filter((k) => k.startsWith('thumbnails['))
+        .sort()
+        .map((k) => req.body[k])
+        .filter(Boolean);
+    }
+    // If only one thumbnail, ensure it's an array
+    if (typeof thumbnails === 'string') thumbnails = [thumbnails];
+
+    console.log("[DEBUG] Request Body:", req.body);
+    console.log("[DEBUG] Thumbnails:", thumbnails);
 
     // Validate required fields
     if (!title || !category || !description) {
@@ -64,8 +77,11 @@ const createPost = async (req, res, next) => {
       post: newPost,
     });
   } catch (error) {
-    console.error("Error creating post:", error);
-    return next(new HttpError("There was a problem creating the post", 500));
+    console.error("[ERROR] Error creating post:", error);
+    if (error && error.stack) {
+      console.error("[ERROR] Stack:", error.stack);
+    }
+    return next(new HttpError("There was a problem creating the post: " + (error && error.message ? error.message : ''), 500));
   }
 };
 

@@ -18,6 +18,10 @@ app.use(cors({
   origin: process.env.FRONTEND_URL 
 }));
 
+// View engine (EJS) for server-rendered pages (verification fallback)
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');

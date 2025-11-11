@@ -10,30 +10,86 @@ const path = require("path")
 const { v4: uuid } = require("uuid");
 const { sendVerificationEmail } = require("../utils/emailService");
 
-const verifyEmail = async (req, res, next) => {
-  const { token } = req.query;
-  if (!token) {
-    return next(new HttpError("No token provided", 400));
-  }
+// const verifyEmail = async (req, res, next) => {
+//   const { token } = req.query;
+//   if (!token) {
+//     return next(new HttpError("No token provided", 400));
+//   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
+//   try {
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//     const user = await User.findById(decoded.id);
     
-    if (!user) {
-      return next(new HttpError("Invalid token", 400));
+//     if (!user) {
+//       return next(new HttpError("Invalid token", 400));
+//     }
+
+//     // Update user's email verification status
+//     user.isVerified = true;
+//     await user.save();
+
+//     // If FRONTEND_URL is configured, redirect the user to the frontend verification/success page.
+//     // This avoids hard-coded localhost links in the static HTML and works when frontend is hosted elsewhere.
+//     if (process.env.FRONTEND_URL) {
+//       // Example: https://app.example.com/verified or /login with a query flag
+//       const redirectTo = `${process.env.FRONTEND_URL.replace(/\/$/, '')}/verified?verified=true`;
+//       return res.redirect(redirectTo);
+//     }
+
+//     // Fallback for local/dev when FRONTEND_URL is not set: serve the static verified page
+//     return res.sendFile(path.join(__dirname, "../public/verified.html"));
+
+//   } catch (error) {
+//     return next(new HttpError("Failed to verify email", 400));
+//   }
+// };
+// userController.js - MODIFIED CODE for verifyEmail
+
+const verifyEmail = async (req, res, next) => {
+  const { token } = req.query;
+  if (!token) {
+    return next(new HttpError("No token provided", 400));
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    
+    if (!user) {
+      return next(new HttpError("Invalid token", 400));
+    }
+
+    // Update user's email verification status
+    user.isVerified = true;
+    await user.save();
+    
+    // --- DYNAMIC REDIRECTION LOGIC START ---
+    
+    // 1. Determine the Base URL to use for the response
+    const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    
+    // 2. If FRONTEND_URL is set (production/staging), redirect the browser to the login page.
+    if (process.env.FRONTEND_URL) {
+      // Redirect to the frontend login page with a success flag
+      const redirectTo = `${frontendBaseUrl.replace(/\/$/, '')}/login?verified=true`;
+      return res.redirect(redirectTo);
     }
 
-    // Update user's email verification status
-    user.isVerified = true;
-    await user.save();
-    return res.sendFile(path.join(__dirname, "../public/verified.html"));
+    // 3. Fallback for local development (FRONTEND_URL is not set): Serve the templated static HTML
+    const htmlPath = path.join(__dirname, '..', 'public', 'verified.html');
+    let htmlContent = fs.readFileSync(htmlPath, 'utf8');
 
-  } catch (error) {
-    return next(new HttpError("Failed to verify email", 400));
-  }
+    // Dynamically replace the FRONTEND_URL placeholder in the static file
+    htmlContent = htmlContent.replace(/<%= FRONTEND_URL %>/g, frontendBaseUrl);
+
+    // Serve the modified HTML
+    return res.send(htmlContent);
+
+  } catch (error) {
+    // Handle JWT errors or database errors
+    return next(new HttpError("Verification failed or link expired", 400));
+  }
 };
-
 const registerUser = async (req, res, next) => {
   try {
     const { name, email, password, confirmPassword,bio } = req.body;
@@ -71,7 +127,7 @@ const registerUser = async (req, res, next) => {
     
 
     // Send verification email
-    await sendVerificationEmail(newUser.email, token);
+    await sendVerificationEmail(newUser.email, token, newUser.name);
 
     setTimeout(async () => {
       const user = await User.findById(newUser._id);
