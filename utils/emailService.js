@@ -1,11 +1,26 @@
-const nodemailer = require("nodemailer");
+// /mnt/data/emailService.js
+const sgMail = require('@sendgrid/mail');
+const nodemailer = require('nodemailer');
 
+const BASE_URL = process.env.BASE_URL || 'http://localhost:5000/api';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-const sendVerificationEmail = async (email, token, name = '') => {
-  const port = process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : 587;
-  const secure = port === 465;
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const SENDER_EMAIL = process.env.SENDER_EMAIL || process.env.EMAIL_USER || 'no-reply@example.com';
 
-  const transporter = nodemailer.createTransport({
+// Setup SendGrid if key exists
+let sendGridEnabled = false;
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+  sendGridEnabled = true;
+}
+
+// Setup Nodemailer fallback transporter if SMTP envs exist
+let smtpTransporter = null;
+if (!sendGridEnabled && process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+  const port = parseInt(process.env.EMAIL_PORT || '587', 10);
+  const secure = port === 465; // true for 465, false for other ports
+  smtpTransporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port,
     secure,
@@ -13,78 +28,95 @@ const sendVerificationEmail = async (email, token, name = '') => {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
+    // Optional: tls: { rejectUnauthorized: false } // only if you know you need it
   });
+}
 
-  const url = `${process.env.BASE_URL}/users/verify-email?token=${token}`;
-  const displayName = name || email.split('@')[0];
+/**
+ * Build verification URL
+ * @param {string} token
+ */
+function buildVerificationUrl(token) {
+  // We expect backend route: GET /api/users/verify-email?token=...
+  // BASE_URL is expected to include /api (as in your env)
+  return `${process.env.BASE_URL.replace(/\/$/, '')}/users/verify-email?token=${encodeURIComponent(token)}`;
+}
 
-  const html = `
-  <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color:#333;">
-    <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-      <tr>
-        <td align="center" style="padding:20px 0; background:#f5f7fb;">
-          <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.05);">
-            <tr>
-              <td style="padding:24px; text-align:left;">
-                <h2 style="margin:0 0 8px 0; font-size:20px; color:#111;">Welcome to Appify</h2>
-                <p style="margin:0 0 16px 0; color:#555;">Hi ${displayName},</p>
-                <p style="margin:0 0 20px 0; color:#555; line-height:1.5;">Thanks for creating an account. Please confirm your email address by clicking the button below. This helps us keep your account secure.</p>
-
-                <p style="text-align:center; margin:24px 0;">
-                  <a href="${url}" style="background:#2563eb; color:#ffffff; text-decoration:none; padding:12px 22px; border-radius:6px; display:inline-block;">Verify Email</a>
-                </p>
-
-                <p style="margin:0 0 12px 0; color:#666; font-size:13px;">If the button doesn't work, copy and paste the following link into your browser:</p>
-                <p style="word-break:break-all; color:#2563eb; font-size:13px; margin:0 0 12px 0;">${url}</p>
-
-                <p style="color:#666; font-size:13px;">If you didn't create an account with us, you can safely ignore this email.</p>
-
-                <div style="margin-top:24px; color:#888; font-size:12px;">
-                  <div>Best regards,</div>
-                  <div style="margin-top:4px;">The Appify Team</div>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td style="background:#f5f7fb; padding:12px 24px; font-size:12px; color:#999; text-align:center;">
-                © ${new Date().getFullYear()} Appify. All rights reserved.
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </div>
+/**
+ * Compose HTML email
+ */
+function verificationEmailHtml(name, verificationUrl) {
+  return `
+    <div style="font-family: Arial, sans-serif; line-height:1.4; color: #111;">
+      <h2>Hello ${name || 'there'},</h2>
+      <p>Thanks for registering. Click the button below to verify your email address:</p>
+      <p style="margin: 20px 0;">
+        <a href="${verificationUrl}" style="background-color:#2563eb;color:white;padding:10px 18px;border-radius:6px;text-decoration:none;display:inline-block">
+          Verify Email
+        </a>
+      </p>
+      <p>If the button doesn't work, paste this link in your browser:</p>
+      <p style="word-break: break-all;"><a href="${verificationUrl}">${verificationUrl}</a></p>
+      <hr />
+      <small>If you didn't create an account with ${FRONTEND_URL}, you can ignore this email.</small>
+    </div>
   `;
+}
 
-  const text = `Hello ${displayName},\n\nThanks for creating an account. Please verify your email by visiting the following link:\n\n${url}\n\nIf you didn't create an account, ignore this message.\n\n— The Appify Team`;
+/**
+ * Send verification email (prefers SendGrid; falls back to SMTP transporter)
+ * @param {string} to
+ * @param {string} token
+ * @param {string} name
+ */
+async function sendVerificationEmail(to, token, name = '') {
+  const verificationUrl = buildVerificationUrl(token);
+  const subject = 'Verify your account';
+  const html = verificationEmailHtml(name, verificationUrl);
+  const text = `Hello ${name || ''},\n\nVerify your account: ${verificationUrl}\n\nIf you didn't request this, ignore this email.`;
 
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: "Confirm your Appify email address",
-    text,
-    html,
-  };
-
-  try {
-    await transporter.verify();
-  } catch (err) {
-    console.error("Email transporter verification failed:", err && err.message ? err.message : err);
-    if (err && err.code === 'EAUTH') {
-      console.error(
-        "SMTP authentication failed (EAUTH). If you're using Gmail: enable 2-Step Verification and create an App Password, then set it as EMAIL_PASSWORD in your .env (no spaces).\nSee: https://support.google.com/accounts/answer/185833"
-      );
+  // Prefer SendGrid HTTP API
+  if (sendGridEnabled) {
+    const msg = {
+      to,
+      from: SENDER_EMAIL,
+      subject,
+      text,
+      html,
+    };
+    try {
+      await sgMail.send(msg);
+      console.log(`SendGrid: verification email sent to ${to}`);
+      return true;
+    } catch (err) {
+      console.error('SendGrid send error:', err && err.message ? err.message : err);
+      // don't throw yet — try SMTP fallback if available
     }
-    throw err;
   }
 
-  try {
-    await transporter.sendMail(mailOptions);
-  } catch (err) {
-    console.error("Failed to send verification email:", err && err.message ? err.message : err);
-    throw err;
+  // Fallback to SMTP transporter if configured
+  if (smtpTransporter) {
+    const mailOptions = {
+      from: SENDER_EMAIL,
+      to,
+      subject,
+      text,
+      html,
+    };
+    try {
+      await smtpTransporter.sendMail(mailOptions);
+      console.log(`SMTP: verification email sent to ${to}`);
+      return true;
+    } catch (err) {
+      console.error('SMTP send error:', err && err.message ? err.message : err);
+      throw new Error('Failed to send verification email by both SendGrid and SMTP.');
+    }
   }
+
+  // If no method available, throw to let caller decide
+  throw new Error('No email provider configured (SendGrid or SMTP).');
+}
+
+module.exports = {
+  sendVerificationEmail,
 };
-
-module.exports = { sendVerificationEmail };

@@ -126,19 +126,33 @@ const registerUser = async (req, res, next) => {
 
     
 
-    // Send verification email
-    await sendVerificationEmail(newUser.email, token, newUser.name);
+    // Try to send verification email but don't let failure block registration
+    try {
+      await sendVerificationEmail(newUser.email, token, newUser.name);
+      // schedule deletion for unverified account in 1 hour
+      setTimeout(async () => {
+        try {
+          const user = await User.findById(newUser._id);
+          if (user && !user.isVerified) {
+            await User.findByIdAndDelete(newUser._id);
+            console.log(`Unverified user ${newUser._id} deleted after 1 hour.`);
+          }
+        } catch (err) {
+          console.error('Error during scheduled cleanup of unverified user:', err && err.message ? err.message : err);
+        }
+      }, 3600000); // 1 hour in ms
 
-    setTimeout(async () => {
-      const user = await User.findById(newUser._id);
-      if (user && !user.isVerified) {
-        await User.findByIdAndDelete(newUser._id);
-        console.log(`Unverified user with ID ${newUser._id} has been deleted.`);
-      }
-    }, 900000); // 1 hour = 3600000 ms
+      return res.status(201).json({ message: 'Registered successfully. Verification email sent.' });
+    } catch (mailErr) {
+      console.error('Email send failed after user creation:', mailErr && mailErr.message ? mailErr.message : mailErr);
+      // Optionally mark user with a flag emailSent: false
+      // await User.findByIdAndUpdate(newUser._id, { emailSent: false });
 
-    
-    res.status(201).json({ message: `New user ${newUser.name} registered. Please verify your email!`, user: newUser });
+      // still respond 201 but advise next steps
+      return res.status(201).json({
+        message: 'Registered successfully, but verification email could not be sent. Please contact support or try resending verification.',
+      });
+    }
   } catch (error) {
     console.error("Error during registration:", error); // Log the error for debugging
     return next(new HttpError("User not registered due to an error", 500));
